@@ -1,0 +1,92 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:2.1.5.RELEASE"
+        classpath "org.springframework.cloud:spring-cloud-contract-gradle-plugin:2.1.1.RELEASE"
+        classpath "org.springframework.cloud:spring-cloud-contract-pact:2.1.1.RELEASE"
+        classpath "io.rest-assured:spring-mock-mvc:3.0.0"
+        classpath "au.com.dius:pact-jvm-provider-gradle_2.12:3.5.23"
+        classpath "gradle.plugin.com.wiredforcode:gradle-spawn-plugin:0.8.2"
+    }
+}
+
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'spring-cloud-contract'
+apply plugin: 'maven-publish'
+apply plugin: 'au.com.dius.pact'
+apply plugin: "com.wiredforcode.spawn"
+
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:Greenwich.RELEASE"
+    }
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.cloud:spring-cloud-starter-stream-rabbit")
+
+    testImplementation("org.springframework.cloud:spring-cloud-stream-test-support")
+    testImplementation("org.springframework.cloud:spring-cloud-starter-contract-verifier")
+    testImplementation "io.rest-assured:spring-mock-mvc:3.0.0"
+    testImplementation "au.com.dius:pact-jvm-consumer-junit_2.12:3.5.13"
+
+    compileOnly 'org.projectlombok:lombok:1.18.8'
+    annotationProcessor 'org.projectlombok:lombok:1.18.8'
+}
+
+springBoot {
+    mainClassName = 'com.example.snpprovidergradle.SnpProviderApplication'
+}
+
+task startProvider(type: SpawnProcessTask, dependsOn: 'assemble') {
+    command "java -Dspring.profiles.active=test -jar ${jar.archivePath}"
+    ready 'Started SnpProviderApplication'
+}
+
+task stopProvider(type: KillProcessTask)
+
+contracts {
+    contractDependency {
+        stringNotation = "${project.group}:${project.name}:+"
+    }
+    contractsMode = "REMOTE"
+    baseClassForTests = "com.example.snpprovidergradle.SnpContractTest"
+    contractRepository {
+        repositoryUrl = "pact://http://localhost:8085"
+    }
+}
+
+pact {
+    serviceProviders {
+        'snp-provider-gradle' {
+            port = 8096
+
+            startProviderTask = startProvider
+            terminateProviderTask = stopProvider
+            stateChangeUrl = url('http://localhost:8096/pactStateChange')
+
+            hasPactsFromPactBroker("http://localhost:8085")
+        }
+    }
+}

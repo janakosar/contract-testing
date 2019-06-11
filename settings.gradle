@@ -1,0 +1,4 @@
+include 'foo-consumer'
+include 'snp-provider-gradle'
+
+rootProject.name = 'snp-testing-gradle'

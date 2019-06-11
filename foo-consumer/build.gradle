@@ -1,0 +1,57 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+    dependencies {
+        classpath "org.springframework.cloud:spring-cloud-contract-gradle-plugin:2.1.1.RELEASE"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:2.1.5.RELEASE"
+        classpath "au.com.dius:pact-jvm-provider-gradle_2.12:3.5.23"    }
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'maven-publish'
+apply plugin: 'au.com.dius.pact'
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:Greenwich.RELEASE"
+    }
+}
+
+sourceCompatibility = org.gradle.api.JavaVersion.VERSION_1_8
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.cloud:spring-cloud-starter-stream-rabbit")
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "au.com.dius:pact-jvm-consumer-junit_2.12:3.5.13"
+
+    compileOnly 'org.projectlombok:lombok:1.18.8'
+    annotationProcessor 'org.projectlombok:lombok:1.18.8'
+}
+
+
+test {
+    systemProperties['pact.rootDir'] = "$buildDir/pacts"
+}
+
+pact {
+    publish {
+        pactBrokerUrl = "http://localhost:8085"
+        pactDirectory = "$buildDir/pacts"
+    }
+}
+
+publishToMavenLocal.dependsOn("pactPublish")

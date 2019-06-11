@@ -1,0 +1,11 @@
+spring:
+  application.name: foo-consumer
+server.port: 8081
+logging:
+  level:
+    org.springframework.cloud: debug
+
+rest:
+  provider:
+    snp:
+      port: 8096
